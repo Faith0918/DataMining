@@ -41,3 +41,53 @@ prop.table(table(sms_raw_test$V1))
 install.packages("wordcloud")
 library(wordcloud)
 wordcloud(sms_corpus_train, min.freq = 40, random.order = FALSE)
+spam <- subset(sms_raw_train, V1 == "spam")
+ham <- subset(sms_raw_train, V1 == "ham")
+wordcloud(spam$V2, max.words = 40, scale = c(3, 0.5))
+wordcloud(ham$V2, max.words = 40, scale = c(3, 0.5))
+
+#Data preparation – creating indicator features for frequent words
+#find terms appearing at least 5 times in the sms_dtm_train matrix:
+findFreqTerms(sms_dtm_train, 5)
+Dictionary <- function(x) {
+  if( is.character(x) ) {
+    return (x)
+  }
+  stop('x is not a character vector')
+}
+
+sms_dict <- Dictionary(findFreqTerms(sms_dtm_train, 5))
+
+sms_train <- DocumentTermMatrix(sms_corpus_train,
+                                list(dictionary = sms_dict))
+sms_test <- DocumentTermMatrix(sms_corpus_test,
+                               list(dictionary = sms_dict))
+
+convert_counts <- function(x) {
+  x <- ifelse(x > 0, 1, 0)
+  x <- factor(x, levels = c(0, 1), labels = c("No", "Yes"))
+  return(x)
+}
+sms_train <- apply(sms_train, MARGIN = 2, convert_counts)
+sms_test <- apply(sms_test, MARGIN = 2, convert_counts)
+
+#Step3 - training a model on the data
+install.packages("e1071")
+library(e1071)
+sms_classifier <- naiveBayes(sms_train, sms_raw_train$V1)
+
+#Step4 - evaluating model performance
+sms_test_pred <- predict(sms_classifier, sms_test)
+install.packages("gmodels")
+library(gmodels)
+CrossTable(sms_test_pred, sms_raw_test$V1,
+           prop.chisq = FALSE, prop.t = FALSE,
+           dnn = c('predicted', 'actual'))
+
+#Step 5 – improving model performance
+sms_classifier2 <- naiveBayes(sms_train, sms_raw_train$V1,
+                              laplace = 0.2)
+sms_test_pred2 <- predict(sms_classifier2, sms_test)
+CrossTable(sms_test_pred2, sms_raw_test$V1,
+           prop.chisq = FALSE, prop.t = FALSE, 
+           dnn = c('predicted', 'actual'))
