@@ -4,3 +4,4 @@ top = read.csv('C:/Users/Faith/Documents/practice_r/data/top10s.csv')
 install.packages("dplyr")
 library(dplyr)
 glimpse(top)  
+
